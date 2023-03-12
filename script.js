@@ -148,6 +148,13 @@ function boom() {
         score.play();
     }
 }
+function beep() {
+    const hit = new Audio();
+    hit.src = "./sounds/beep.mp3";
+    if (muted == false){
+        hit.play();
+    }
+}
 function Sound() {
     this.unmuted = new Image();
     this.muted = new Image();
@@ -284,11 +291,13 @@ function Game() {
 
         if (this.paddlehit()) {
             this.ball.dx *= -1;
+            beep();
             //Prevents the ball from sticking to the paddle
             this.ball.x = this.player.x+this.ball.size+1
         }
         else if (this.paddlehitAI()){
             this.ball.dx *= -1;
+            beep();
             //Prevents the ball from sticking to the paddle
             this.ball.x = this.ai.x-this.ai.w-this.ball.size-1;
         }
