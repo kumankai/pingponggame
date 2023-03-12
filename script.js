@@ -1,20 +1,24 @@
-
+//Responsible for all functionalities
 
 //////////////////////// Global Variables ////////////////////////
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-ctx.strokeStyle = 'grey';
-ctx.font = '30px Arial';
+const canvas = document.getElementById("canvas"); //canvas
+const ctx = canvas.getContext("2d"); //context
+ctx.font = '30px Arial'; //font size
+ctx.lineWidth = 10;
+ctx.strokeStyle = "black";
+let muted = false;
 
 //////////////////////// Player ////////////////////////
 function Player() {
+    //Player Attributes
     this.w = 20;
     this.h= 70;
     this.x = 150;
     this.y = canvas.height/2-45;
-    this.speed = 5;
+    this.speed = 3.5;
     this.dy = 0;
 
+    //draws player
     this.drawPlayer = () => {
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
@@ -31,23 +35,24 @@ function Player() {
     };
 
     this.detectWalls = () => {
-        if (this.y-10 < 0){
-            this.y = 10;
+        if (this.y-this.w/2 < 0){ // we minus with the width/2 to consider the round edges
+            this.y = this.w/2;
         }
-        if (this.y+80 > canvas.height){
-            this.y = canvas.height-80;
+        if (this.y+this.h+this.w/2 > canvas.height){ //we add the width/2 to consider the round edges
+            this.y = canvas.height-(this.h+this.w/2);
         }
     };
 
     this.moveUp = () => {
-        this.dy = -this.speed;
+        this.dy = -this.speed; //set dy to negative speed
     };
 
     this.moveDown = function() {
-        this.dy = this.speed;
+        this.dy = this.speed; //set dy to speed
     };
 
     this.keyDown = (e) => {
+        //When arrows are pressed
         if (e.key === 'ArrowUp' || e.key === 'Up'){
             this.moveUp();
         } else if (e.key === 'ArrowDown' || e.key === 'Down') {
@@ -56,27 +61,26 @@ function Player() {
     };
 
     this.keyUp = (e) => {
+        //When arrows are lifted
         if (e.key === 'ArrowUp' || e.key === 'Up' || e.key === 'ArrowDown' || e.key === 'Down'){
-            this.dx = 0;
-            this.dy = 0;
+            this.dy = 0; //stops moving
         }
     };
 
     this.move = () => {
-        document.addEventListener('keydown', this.keyDown);
-        document.addEventListener('keyup', this.keyUp);
         this.y += this.dy;
-        this.detectWalls();
+        this.detectWalls(); //Avoids going through walls
     };
 };
 
 //////////////////////// AI ////////////////////////
 function AI() {
+    //AI Attributes
     this.w = 20;
     this.h = 70;
     this.x = 850;
     this.y = canvas.height/2-45;
-    this.dy = 3.9;
+    this.dy = 3.5;
 
     this.drawAI = () => {
         ctx.beginPath();
@@ -87,21 +91,24 @@ function AI() {
         ctx.arc(this.x-this.w/2, this.y, this.w/2, 0, Math.PI, true);
         ctx.fill();
     };
+
     this.resetAI = () => {
         this.y = canvas.height/2-45;
     };
+
     this.detectWallsAI = () => {
-        if (this.y-10 < 0){
+        if (this.y-this.w/2 < 0){
             this.y = 10;
         }
-        if (this.y+80 > canvas.height){
-            this.y = canvas.height-80;
+        if (this.y+this.h+this.w/2 > canvas.height){
+            this.y = canvas.height-(this.h+this.w/2);
         }
     };
 };
 
 //////////////////////// Ball ////////////////////////
 function Ball() {
+    //Ball attributes
     this.x = canvas.width/2;
     this.y = 100;
     this.size = 7.5;
@@ -116,6 +123,7 @@ function Ball() {
 
     this.resetball = () => {
         this.x = canvas.width/2;
+        //Randomly positions ball in range 200,300 pixel
         this.y = Math.floor(Math.random() * 300) + 200;
     };
 
@@ -126,28 +134,70 @@ function Ball() {
     this.outright = () => {
         return this.x - this.size >= canvas.width
     };
+    this.move = () => {
+        this.x += this.dx;
+        this.y += this.dy;
+    }
 };
 
 //////////////////////// Sound ////////////////////////
 function boom() {
-	const audio = new Audio();
-	audio.src = "./sounds/boom.mp3";
-	audio.play();
+	const score = new Audio();
+	score.src = "./sounds/boom.mp3";
+    if (muted == false){
+        score.play();
+    }
+}
+function Sound() {
+    this.unmuted = new Image();
+    this.muted = new Image();
+    
+    this.unmuted.src = "./images/unmuted.png";
+    this.muted.src = "./images/muted.png";
+
+    this.unmute = () => { //Loads unmuted logo
+        ctx.drawImage(this.unmuted, 20, 20, 50, 40);
+    }
+    this.mute = () => { //Loads muted logo
+        ctx.drawImage(this.muted, 20, 20, 50, 40);
+    }
+    this.click = (event) => { //Determines whether the button is clicked
+        const rect = canvas.getBoundingClientRect();
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+            if (x >= 20 && x <= 70 && y >= 20 && y <= 60){
+                 if (muted == false){
+                    muted = true;
+                 } else {muted = false;}
+            }
+    }
+    this.audiobutton = () => { //Listens for mouse click
+        canvas.addEventListener('click', this.click)
+    }
+    this.toggle = () => { //Provides entire functionality
+        this.audiobutton();
+        if (muted == false){
+            this.unmute();
+        }
+        else{
+            this.mute();
+        }
+    }
 }
 
 //////////////////////// Game ////////////////////////
 
 function Game() {
+    //Game attributes
     this.player = new Player();
     this.ai = new AI();
     this.ball = new Ball();
+    this.audio = new Sound();
     this.p1 = 0;
     this.p2 = 0;
-    this.running = false;
+    this.playing = false;
 
     this.net = () => {
-        ctx.lineWidth = 10;
-        ctx.strokeStyle = "black";
         ctx.beginPath();
         ctx.moveTo(500, 0);
         ctx.lineTo(500, 600);
@@ -156,29 +206,35 @@ function Game() {
     };
 
     this.ui = () => {
+        //UI draws and updates the canvas
         ctx.clearRect(0,0, canvas.width, canvas.height);
         ctx.fillText(this.p1, 380, 100);
         ctx.fillText(this.p2, 600, 100);
         this.net();
         this.player.drawPlayer();
         this.ai.drawAI();
+        this.audio.toggle();
     };
 
     this.paddlehit = () => {
+        //Player's hitbox
         return ((this.ball.y+this.ball.size >= this.player.y-this.player.w/2 && this.ball.y-this.ball.size <= this.player.y+this.player.h+this.player.w/2)
             && (this.ball.x-this.ball.size < this.player.x && this.ball.x-this.ball.size > this.player.x-this.player.w/2))
     };
 
     this.paddlehitAI = () => {
+        //AI's hitbox
         return ((this.ball.y+this.ball.size >= this.ai.y-this.ai.w/2 && this.ball.y-this.ball.size <= this.ai.y+this.ai.h+this.ai.w/2)
             && (this.ball.x+this.ball.size >= this.ai.x-20 && this.ball.x+this.ball.size <= this.ai.x-this.ai.w/2))
     };
 
     this.chaseball = () => {
-        if (this.ai.y+35 > this.ball.y){
+        //AI's mind
+        //Tries to center the ball to its center
+        if (this.ai.y+this.ai.h/2 > this.ball.y){
             this.ai.y -= this.ai.dy;
         }
-        else if (this.ai.y+35 < this.ball.y) {
+        else if (this.ai.y+this.ai.h/2 < this.ball.y) {
             this.ai.y += this.ai.dy;
         }
     };
@@ -191,9 +247,11 @@ function Game() {
     };
 
     this.start = () => {
-        if (this.running == false) {
+        // starts/resets the game
+        //condition for extra security that the game does not reset while playing
+        if (this.playing == false) {
             ctx.clearRect(0,0, canvas.width, canvas.height);
-            this.running = true;
+            this.playing = true;
             this.p1 = 0;
             this.p2 = 0;
             this.player.resetPlayer();
@@ -203,8 +261,9 @@ function Game() {
     };
 
     this.gameover = () => {
-        this.running = false;
-        ctx.clearRect(475, 80, 50, 60);
+        //End of game
+        this.playing = false;
+        ctx.clearRect(475, 70, 50, 70);
         ctx.fillText("Game Over", 425, 100);
         if (this.p1 > this.p2){
             ctx.fillText("You Win!", 440, 130);
@@ -215,27 +274,40 @@ function Game() {
     };
 
     this.play  = () => {
+        //game functionalities
+
+        //updates
         this.player.move();
         this.chaseball();
         this.ai.detectWallsAI();
         this.ball.drawball();
 
-        if (this.paddlehit() || this.paddlehitAI()) {
+        if (this.paddlehit()) {
             this.ball.dx *= -1;
+            //Prevents the ball from sticking to the paddle
+            this.ball.x = this.player.x+this.ball.size+1
         }
+        else if (this.paddlehitAI()){
+            this.ball.dx *= -1;
+            //Prevents the ball from sticking to the paddle
+            this.ball.x = this.ai.x-this.ai.w-this.ball.size-1;
+        }
+
+        // Floor & ceiling bounce
         if (this.ball.y + this.ball.size >= canvas.height || this.ball.y - this.ball.size <= 0) {
             this.ball.dy *= -1;
         }
         
-        this.ball.x += this.ball.dx;
-        this.ball.y += this.ball.dy;
+        this.ball.move();
 
         if (this.ball.outright()){
+            //Player's point
             boom();
             this.p1++;
             this.ball.resetball();
         }
         if (this.ball.outleft()){
+            //AI's point
             boom();
             this.p2++;
             this.ball.resetball();
@@ -243,25 +315,27 @@ function Game() {
     };
 
     this.run = () => {
+        //Main function
         this.ui();
 
         if (this.p1 == 20 || this.p2 == 20){
             this.gameover();
         }
 
-        if (this.running == true) {
+        if (this.playing == true) {
             this.play();
         }
         else {
             this.menu();
         }
-
-        document.addEventListener('keypress', this.start);
         requestAnimationFrame(this.run);
     };
+    document.addEventListener('keypress', this.start);
+    document.addEventListener('keydown', this.player.keyDown);
+    document.addEventListener('keyup', this.player.keyUp);
 };
 
 //////////////////////////////////////////////////////////
 
-const Pong = new Game();
+var Pong = new Game();
 Pong.run();
