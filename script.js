@@ -1,238 +1,267 @@
+
+
+//////////////////////// Global Variables ////////////////////////
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+ctx.strokeStyle = 'grey';
+ctx.font = '30px Arial';
 
-let p1 = 0;
-let p2 = 0;
+//////////////////////// Player ////////////////////////
+function Player() {
+    this.w = 20;
+    this.h= 70;
+    this.x = 150;
+    this.y = canvas.height/2-45;
+    this.speed = 5;
+    this.dy = 0;
 
-const Player = {
-	w: 50,
-	h: 70,
-	x: 150,
-	y: canvas.height/2-45,
-	speed: 5,
-	dy: 0
-}
+    this.drawPlayer = () => {
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x, this.y + this.h);
+        ctx.arc(this.x-this.w/2, this.y + this.h, this.w/2, 0, Math.PI);
+        ctx.lineTo(this.x-this.w, this.y);
+        ctx.arc(this.x-this.w/2, this.y, this.w/2, 0, Math.PI, true);
+        ctx.fill();
+    };
 
-const AI = {
-	w: 50,
-	h: 70,
-	x: 850,
-	y: canvas.height/2-45,
-	dy: 4
-}
+    this.resetPlayer = () => {
+        this.y = canvas.height/2-45;
+        this.dy = 0;
+    };
 
-const ball = {
-	x: canvas.width/2,
-	y: 100,
-	size: 7.5,
-	dx: 6,
-	dy: 5
+    this.detectWalls = () => {
+        if (this.y-10 < 0){
+            this.y = 10;
+        }
+        if (this.y+80 > canvas.height){
+            this.y = canvas.height-80;
+        }
+    };
+
+    this.moveUp = () => {
+        this.dy = -this.speed;
+    };
+
+    this.moveDown = function() {
+        this.dy = this.speed;
+    };
+
+    this.keyDown = (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'Up'){
+            this.moveUp();
+        } else if (e.key === 'ArrowDown' || e.key === 'Down') {
+            this.moveDown();
+        }
+    };
+
+    this.keyUp = (e) => {
+        if (e.key === 'ArrowUp' || e.key === 'Up' || e.key === 'ArrowDown' || e.key === 'Down'){
+            this.dx = 0;
+            this.dy = 0;
+        }
+    };
+
+    this.move = () => {
+        document.addEventListener('keydown', this.keyDown);
+        document.addEventListener('keyup', this.keyUp);
+        this.y += this.dy;
+        this.detectWalls();
+    };
 };
 
-function resetball() {
-	ball.x = canvas.width/2;
-	ball.y = 100;
+//////////////////////// AI ////////////////////////
+function AI() {
+    this.w = 20;
+    this.h = 70;
+    this.x = 850;
+    this.y = canvas.height/2-45;
+    this.dy = 3.9;
+
+    this.drawAI = () => {
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x, this.y + this.h);
+        ctx.arc(this.x-this.w/2, this.y + this.h, this.w/2, 0,Math.PI);
+        ctx.lineTo(this.x-this.w, this.y);
+        ctx.arc(this.x-this.w/2, this.y, this.w/2, 0, Math.PI, true);
+        ctx.fill();
+    };
+    this.resetAI = () => {
+        this.y = canvas.height/2-45;
+    };
+    this.detectWallsAI = () => {
+        if (this.y-10 < 0){
+            this.y = 10;
+        }
+        if (this.y+80 > canvas.height){
+            this.y = canvas.height-80;
+        }
+    };
+};
+
+//////////////////////// Ball ////////////////////////
+function Ball() {
+    this.x = canvas.width/2;
+    this.y = 100;
+    this.size = 7.5;
+    this.dx = 5;
+    this.dy = 4;
+
+    this.drawball = () => {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+    };
+
+    this.resetball = () => {
+        this.x = canvas.width/2;
+        this.y = Math.floor(Math.random() * 300) + 200;
+    };
+
+    this.outleft = () => {
+        return this.x + this.size <= 0
+    };
+
+    this.outright = () => {
+        return this.x - this.size >= canvas.width
+    };
+};
+
+//////////////////////// Sound ////////////////////////
+function boom() {
+	const audio = new Audio();
+	audio.src = "./sounds/boom.mp3";
+	audio.play();
 }
 
-function resetPlayer() {
-	Player.x = 150
-	Player.y = canvas.height/2-45
-	Player.dy = 0
-}
+//////////////////////// Game ////////////////////////
 
-function drawPlayer() {
-	ctx.beginPath();
-	ctx.moveTo(Player.x,
-		Player.y);
-	ctx.lineTo(Player.x,
-		Player.y + Player.h);
-	ctx.arc(
-		Player.x-10,
-		Player.y + Player.h,
-		10,
-		0,
-		Math.PI);
-	ctx.lineTo(Player.x-20, Player.y);
-	ctx.arc(Player.x-10, Player.y, 10, 0, Math.PI, true);
-	ctx.fill();
-}
+function Game() {
+    this.player = new Player();
+    this.ai = new AI();
+    this.ball = new Ball();
+    this.p1 = 0;
+    this.p2 = 0;
+    this.running = false;
 
-function drawAI() {
-	ctx.beginPath();
-	ctx.moveTo(AI.x,
-		AI.y);
-	ctx.lineTo(AI.x,
-		AI.y + AI.h);
-	ctx.arc(
-		AI.x-10,
-		AI.y + AI.h,
-		10,
-		0,
-		Math.PI);
-	ctx.lineTo(AI.x-20, AI.y);
-	ctx.arc(AI.x-10, AI.y, 10, 0, Math.PI, true);
-	ctx.fill();
-}
+    this.net = () => {
+        ctx.lineWidth = 10;
+        ctx.strokeStyle = "black";
+        ctx.beginPath();
+        ctx.moveTo(500, 0);
+        ctx.lineTo(500, 600);
+        ctx.fill();
+        ctx.stroke();
+    };
 
-function drawball() {
-	ctx.beginPath();
-	ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI*2);
-	ctx.fill();
-}
+    this.ui = () => {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        ctx.fillText(this.p1, 380, 100);
+        ctx.fillText(this.p2, 600, 100);
+        this.net();
+        this.player.drawPlayer();
+        this.ai.drawAI();
+    };
 
-function detectWalls() {
-	if (Player.y-10 < 0){
-		Player.y = 10;
-	}
-	if (Player.y+80 > canvas.height){
-		Player.y = canvas.height-80;
-	}
-}
+    this.paddlehit = () => {
+        return ((this.ball.y+this.ball.size >= this.player.y-this.player.w/2 && this.ball.y-this.ball.size <= this.player.y+this.player.h+this.player.w/2)
+            && (this.ball.x-this.ball.size < this.player.x && this.ball.x-this.ball.size > this.player.x-this.player.w/2))
+    };
 
-function detectWallsAI() {
-	if (AI.y-10 < 0){
-		AI.y = 10;
-	}
-	if (AI.y+80 > canvas.height){
-		AI.y = canvas.height-80;
-	}
-}
+    this.paddlehitAI = () => {
+        return ((this.ball.y+this.ball.size >= this.ai.y-this.ai.w/2 && this.ball.y-this.ball.size <= this.ai.y+this.ai.h+this.ai.w/2)
+            && (this.ball.x+this.ball.size >= this.ai.x-20 && this.ball.x+this.ball.size <= this.ai.x-this.ai.w/2))
+    };
 
-function move() {
-	Player.y += Player.dy;
+    this.chaseball = () => {
+        if (this.ai.y+35 > this.ball.y){
+            this.ai.y -= this.ai.dy;
+        }
+        else if (this.ai.y+35 < this.ball.y) {
+            this.ai.y += this.ai.dy;
+        }
+    };
 
-	detectWalls();
-}
+    this.menu = () => {
+        ctx.clearRect(475, 270, 50, 40);
+        ctx.fillText("Press any key to start", 365, 300);
+        this.player.resetPlayer();
+        this.ai.resetAI();
+    };
 
-function moveUp() {
-	Player.dy = -Player.speed;
-}
-function moveDown() {
-	Player.dy = Player.speed;
-}
+    this.start = () => {
+        if (this.running == false) {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            this.running = true;
+            this.p1 = 0;
+            this.p2 = 0;
+            this.player.resetPlayer();
+            this.ai.resetAI();
+            this.ball.resetball();
+        }
+    };
 
-function chaseball() {
-	if (AI.y+35 > ball.y){
-		AI.y -= AI.dy;
-	}
-	else if (AI.y+35 < ball.y) {
-		AI.y += AI.dy;
-	}
-}
+    this.gameover = () => {
+        this.running = false;
+        ctx.clearRect(475, 80, 50, 60);
+        ctx.fillText("Game Over", 425, 100);
+        if (this.p1 > this.p2){
+            ctx.fillText("You Win!", 440, 130);
+        }
+        else {
+            ctx.fillText("You Lose!", 440, 130);
+        }
+    };
 
-function paddlehit() {
-	return ((ball.x - ball.size <= Player.x && ball.x + ball.size >= Player.x-3) && (ball.y - ball.size >= Player.y-10 && ball.y + ball.size <= Player.y+Player.h+10))
-}
+    this.play  = () => {
+        this.player.move();
+        this.chaseball();
+        this.ai.detectWallsAI();
+        this.ball.drawball();
 
-function paddlehitAI() {
-	return ((ball.x + ball.size >= AI.x-20 && ball.x - ball.size <= AI.x-17) && (ball.y - ball.size >= AI.y-10 && ball.y + ball.size <= AI.y+AI.h+10))
-}
+        if (this.paddlehit() || this.paddlehitAI()) {
+            this.ball.dx *= -1;
+        }
+        if (this.ball.y + this.ball.size >= canvas.height || this.ball.y - this.ball.size <= 0) {
+            this.ball.dy *= -1;
+        }
+        
+        this.ball.x += this.ball.dx;
+        this.ball.y += this.ball.dy;
 
-function edgehit() {
-	//When it hits the side of the paddle
-	return (((ball.y+ball.size >= Player.y-10 && ball.y+ball.size <= Player.y-5) //Top side
-			|| (ball.y-ball.size <= Player.y+Player.h+10 && ball.y-ball.size >= Player.y+Player.h+5)) //Bottom side
-			&& (ball.x-ball.size <= Player.x && ball.x+ball.size >= Player.x-20))//x range
-}
+        if (this.ball.outright()){
+            boom();
+            this.p1++;
+            this.ball.resetball();
+        }
+        if (this.ball.outleft()){
+            boom();
+            this.p2++;
+            this.ball.resetball();
+        }
+    };
 
-function edgehitAI() {
-	return (((ball.y+ball.size <= AI.y-10 && ball.y+ball.size >= AI.y-7)//Top side
-			|| (ball.y-ball.size >= Player.y+Player.h+10 && ball.y-ball.size <= Player.y+Player.h+7))//Bottom side
-			&& (ball.x-ball.size >= AI.x && ball.x+ball.size <= Player.x-20))//x range
-}
+    this.run = () => {
+        this.ui();
 
-function keyDown(e) {
-	if (e.key === 'ArrowUp' || e.key === 'Up'){
-		moveUp();
-	} else if (e.key === 'ArrowDown' || e.key === 'Down') {
-		moveDown();
-	}
-}
+        if (this.p1 == 20 || this.p2 == 20){
+            this.gameover();
+        }
 
-function keyUp(e) {
-	if (e.key === 'ArrowUp' || e.key === 'Up' || e.key === 'ArrowDown' || e.key === 'Down'){
-		Player.dx = 0;
-		Player.dy = 0;
-	}
-}
+        if (this.running == true) {
+            this.play();
+        }
+        else {
+            this.menu();
+        }
 
-function update() {
-	ctx.clearRect(0,0, canvas.width, canvas.height);
-	drawPlayer();
-	move();
-	drawball();
-	drawAI();
-	chaseball();
-	detectWallsAI();
+        document.addEventListener('keypress', this.start);
+        requestAnimationFrame(this.run);
+    };
+};
 
-	if (paddlehit() || paddlehitAI() || edgehit() || edgehitAI()) {
-		ball.dx *= -1;
-	}
-	if (ball.y + ball.size >= canvas.height || ball.y - ball.size <= 0) {
-		ball.dy *= -1;
-	}
-	
-	ball.x += ball.dx;
-	ball.y += ball.dy;
+//////////////////////////////////////////////////////////
 
-	if (ball.x + ball.size <= 0 || ball.x - ball.size >= canvas.width) {
-		resetball();
-	}
-
-	requestAnimationFrame(update);
-}
-
-update();
-
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-
-// // Arcs
-// ctx.beginPath();
-// const centerX = canvas.width/2;
-// const centerY = canvas.height/2
-// //head
-// ctx.arc(centerX, centerY, 290, 0, Math.PI*2);
-// //mouth
-// ctx.moveTo(centerX + 100, centerY);
-// ctx.arc(centerX, centerY, 100, 0, Math.PI, false);
-// //eyes
-// ctx.moveTo(centerX - 60, centerY- 80);
-// ctx.arc(centerX - 80, centerY - 80, 20, 0, Math.PI*2);
-// ctx.moveTo(centerX + 100, centerY - 80);
-// ctx.arc(centerX + 80, centerY - 80, 20, 0, Math.PI*2);
-
-// ctx.stroke();
-
-
-// Paths
-// ctx.beginPath();
-// ctx.moveTo(50, 50);
-// ctx.lineTo(150, 50);
-// ctx.lineTo(100, 150);
-// //ctx.lineTo(50, 50);
-// ctx.closePath();
-// ctx.fill();
-
-// // fillRect()
-// ctx.fillStyle = 'red';
-// ctx.fillRect(20,20,150,100);
-// ctx.fillRect(20,200,150,100);
-
-// // strokeRect()
-// ctx.lineWidth = 5;
-// ctx.strokeStyle = 'yellow';
-// ctx.strokeRect(100,200,150,100);
-
-// // clearRect()
-// ctx.clearRect(25, 25, 140,90);
-
-// //fillText()
-// ctx.font = '30px Arial';
-// ctx.fillStyle = 'purple';
-// ctx.fillText("Hello world", 400, 50);
-
-// // strokeText()
-// ctx.lineWidth = 1;
-// ctx.strokeStyle = 'orange';
-// ctx.strokeText('Hello world', 400, 100)
+const Pong = new Game();
+Pong.run();
