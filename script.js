@@ -3,10 +3,6 @@
 //////////////////////// Global Variables ////////////////////////
 const canvas = document.getElementById("canvas"); //canvas
 const ctx = canvas.getContext("2d"); //context
-ctx.font = '30px Arial'; //font size
-ctx.lineWidth = 10;
-ctx.strokeStyle = "black";
-let muted = false;
 
 //////////////////////// Player ////////////////////////
 function Player() {
@@ -137,25 +133,12 @@ function Ball() {
     this.move = () => {
         this.x += this.dx;
         this.y += this.dy;
-    }
+    };
 };
 
 //////////////////////// Sound ////////////////////////
-function boom() {
-	const score = new Audio();
-	score.src = "./sounds/boom.mp3";
-    if (muted == false){
-        score.play();
-    }
-}
-function beep() {
-    const hit = new Audio();
-    hit.src = "./sounds/beep.mp3";
-    if (muted == false){
-        hit.play();
-    }
-}
 function Sound() {
+    this.sound = false;
     this.unmuted = new Image();
     this.muted = new Image();
     
@@ -164,33 +147,53 @@ function Sound() {
 
     this.unmute = () => { //Loads unmuted logo
         ctx.drawImage(this.unmuted, 20, 20, 50, 40);
-    }
+    };
+
     this.mute = () => { //Loads muted logo
         ctx.drawImage(this.muted, 20, 20, 50, 40);
-    }
+    };
+
     this.click = (event) => { //Determines whether the button is clicked
         const rect = canvas.getBoundingClientRect();
             let x = event.clientX - rect.left;
             let y = event.clientY - rect.top;
             if (x >= 20 && x <= 70 && y >= 20 && y <= 60){
-                 if (muted == false){
-                    muted = true;
-                 } else {muted = false;}
+                 if (this.sound == false){
+                    this.sound = true;
+                 } else {this.sound = false;}
             }
-    }
+    };
+
     this.audiobutton = () => { //Listens for mouse click
         canvas.addEventListener('click', this.click)
-    }
+    };
+
     this.toggle = () => { //Provides entire functionality
         this.audiobutton();
-        if (muted == false){
+        if (this.sound == false){
             this.unmute();
         }
         else{
             this.mute();
         }
-    }
-}
+    };
+
+    this.boom = () => { //Score sound
+        const score = new Audio();
+        score.src = "./sounds/boom.mp3";
+        if (this.sound == false){
+            score.play();
+        }
+    };
+
+    this.beep= () => { //Paddle hit sound
+        const hit = new Audio();
+        hit.src = "./sounds/beep.mp3";
+        if (this.sound == false){
+            hit.play();
+        }
+    };
+};
 
 //////////////////////// Game ////////////////////////
 
@@ -203,8 +206,10 @@ function Game() {
     this.p1 = 0;
     this.p2 = 0;
     this.playing = false;
+    ctx.font = '30px Arial'; //font size
 
     this.net = () => {
+        ctx.lineWidth = 10;
         ctx.beginPath();
         ctx.moveTo(500, 0);
         ctx.lineTo(500, 600);
@@ -213,7 +218,7 @@ function Game() {
     };
 
     this.ui = () => {
-        //UI draws and updates the canvas
+        //Updates the canvas
         ctx.clearRect(0,0, canvas.width, canvas.height);
         ctx.fillText(this.p1, 380, 100);
         ctx.fillText(this.p2, 600, 100);
@@ -291,13 +296,13 @@ function Game() {
 
         if (this.paddlehit()) {
             this.ball.dx *= -1;
-            beep();
+            this.audio.beep();
             //Prevents the ball from sticking to the paddle
             this.ball.x = this.player.x+this.ball.size+1
         }
         else if (this.paddlehitAI()){
             this.ball.dx *= -1;
-            beep();
+            this.audio.beep();
             //Prevents the ball from sticking to the paddle
             this.ball.x = this.ai.x-this.ai.w-this.ball.size-1;
         }
@@ -311,13 +316,13 @@ function Game() {
 
         if (this.ball.outright()){
             //Player's point
-            boom();
+            this.audio.boom();
             this.p1++;
             this.ball.resetball();
         }
         if (this.ball.outleft()){
             //AI's point
-            boom();
+            this.audio.boom();
             this.p2++;
             this.ball.resetball();
         }
