@@ -205,11 +205,13 @@ function Game() {
     this.audio = new Sound();
     this.p1 = 0;
     this.p2 = 0;
+    this.p = 0; //States who scored
     this.playing = false;
-    ctx.font = '30px Arial'; //font size
+
+    ctx.lineWidth = 10;
+    ctx.font = '30px Arial';
 
     this.net = () => {
-        ctx.lineWidth = 10;
         ctx.beginPath();
         ctx.moveTo(500, 0);
         ctx.lineTo(500, 600);
@@ -272,6 +274,18 @@ function Game() {
         }
     };
 
+    this.message = (p) => {
+        if (this.p == 1){ // If user scored
+            ctx.fillText("You +1", 300, 150);  
+        } else if (this.p == -1) { // If AI scored
+            ctx.fillText("AI +1", 610, 150);
+        }
+    }
+
+    this.clear = () => { // Sets a timer for when to clear the message
+        setTimeout( () => {this.p = 0;}, 500);
+    }
+
     this.gameover = () => {
         //End of game
         this.playing = false;
@@ -287,12 +301,12 @@ function Game() {
 
     this.play  = () => {
         //game functionalities
-
         //updates
         this.player.move();
         this.chaseball();
         this.ai.detectWallsAI();
         this.ball.drawball();
+        this.message(this.p);
 
         if (this.paddlehit()) {
             this.ball.dx *= -1;
@@ -318,12 +332,16 @@ function Game() {
             //Player's point
             this.audio.boom();
             this.p1++;
+            this.p = 1;
+            this.clear();
             this.ball.resetball();
         }
         if (this.ball.outleft()){
             //AI's point
             this.audio.boom();
             this.p2++;
+            this.p = -1;
+            this.clear();
             this.ball.resetball();
         }
     };
